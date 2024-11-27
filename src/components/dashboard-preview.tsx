@@ -13,7 +13,7 @@ function QAConversation() {
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setShowAnswer(true);
-    }, 2000); // 20 seconds delay
+    }, 20000); // 20 seconds delay
     return () => clearTimeout(timer);
   }, []);
 
@@ -25,7 +25,7 @@ function QAConversation() {
         </div>
         <div className="flex-1">
           <p className="text-sm">
-            <TypeWriter text="How do I deploy to production?" delay={10} />
+            <TypeWriter text="How do I deploy to production?" delay={50} />
           </p>
         </div>
       </div>

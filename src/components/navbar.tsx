@@ -9,7 +9,11 @@ export function Navbar() {
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
+      const offset = element.offsetTop - 80; // Account for navbar height
+      window.scrollTo({
+        top: offset,
+        behavior: "smooth"
+      });
     }
   };
 

@@ -37,9 +37,16 @@ export function Cursor() {
     const onMouseLeave = () => setHidden(true);
     const onMouseEnter = () => setHidden(false);
 
-    addEventListeners();
+    if (typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches) {
+      addEventListeners();
+    }
+
     return () => removeEventListeners();
   }, []);
+
+  if (typeof window !== 'undefined' && !window.matchMedia('(pointer: fine)').matches) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
