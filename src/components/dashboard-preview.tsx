@@ -5,71 +5,31 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2, Plus, Send, Link as LinkIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TypeWriter } from "./TypeWriter";
+import { QAConversation } from "./qa-conversation";
+import { TypeWriter } from "@/components/ui/type-writer";
 
-function QAConversation() {
-  const [showAnswer, setShowAnswer] = React.useState(false);
+const codeExample = `import { RAGBuilder } from 'docrag';
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowAnswer(true);
-    }, 20000); // 20 seconds delay
-    return () => clearTimeout(timer);
-  }, []);
+// Initialize RAG
+const rag = new RAGBuilder()
+  .addSource('./docs')
+  .setModel('gpt-4')
+  .build();
 
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-3">
-        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-          <span className="text-sm font-medium">You</span>
-        </div>
-        <div className="flex-1">
-          <p className="text-sm">
-            <TypeWriter text="How do I deploy to production?" delay={50} />
-          </p>
-        </div>
-      </div>
-      {showAnswer ? (
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-sm font-medium">AI</span>
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-mono text-muted-foreground">
-              <TypeWriter 
-                text={`To deploy to production, follow these steps:
-1. Build your project using \`npm run build\`
-2. Configure your environment variables
-3. Run database migrations
-4. Start the production server with \`npm start\``}
-                delay={30}
-              />
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="flex gap-3">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <span className="text-sm font-medium">AI</span>
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Generating response...
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+// Query your docs
+const answer = await rag.query(
+  "How do I deploy to production?"
+);`;
 
 export function DashboardPreview() {
   const [currentStep, setCurrentStep] = React.useState(0);
+  const [activeTab, setActiveTab] = React.useState("dashboard");
+  const [showCode, setShowCode] = React.useState(false);
 
   const steps = [
     {
       title: "Login",
+      description: "Sign in to your account",
       preview: (
         <div className="flex items-center justify-center h-full">
           <div className="w-full max-w-sm space-y-4 p-4">
@@ -78,8 +38,8 @@ export function DashboardPreview() {
               <p className="text-sm text-muted-foreground">Enter your credentials to continue</p>
             </div>
             <div className="space-y-4">
-              <input type="email" placeholder="Email" className="w-full px-3 py-2 rounded-md border bg-background font-mono" readOnly />
-              <input type="password" placeholder="Password" className="w-full px-3 py-2 rounded-md border bg-background font-mono" readOnly />
+              <input type="email" placeholder="Email" className="w-full px-3 py-2 rounded-md border bg-background" readOnly />
+              <input type="password" placeholder="Password" className="w-full px-3 py-2 rounded-md border bg-background" readOnly />
               <Button className="w-full">Sign In</Button>
             </div>
           </div>
@@ -88,6 +48,7 @@ export function DashboardPreview() {
     },
     {
       title: "Create RAG",
+      description: "Start a new project",
       preview: (
         <div className="flex items-center justify-center h-full">
           <Button size="lg" className="flex items-center gap-2">
@@ -98,7 +59,8 @@ export function DashboardPreview() {
       )
     },
     {
-      title: "Name & Configure",
+      title: "Configure",
+      description: "Set up your project",
       preview: (
         <div className="h-full flex flex-col p-4 space-y-4">
           <div className="space-y-4">
@@ -107,7 +69,7 @@ export function DashboardPreview() {
               <input 
                 type="text" 
                 defaultValue="Company Docs RAG"
-                className="w-full mt-1 px-3 py-2 rounded-md border bg-background font-mono"
+                className="w-full mt-1 px-3 py-2 rounded-md border bg-background"
                 readOnly
               />
             </div>
@@ -117,7 +79,7 @@ export function DashboardPreview() {
                 <input 
                   type="url" 
                   defaultValue="https://docs.company.com"
-                  className="flex-1 px-3 py-2 rounded-md border bg-background font-mono"
+                  className="flex-1 px-3 py-2 rounded-md border bg-background"
                   readOnly
                 />
                 <Button size="icon">
@@ -130,7 +92,8 @@ export function DashboardPreview() {
       )
     },
     {
-      title: "Indexing",
+      title: "Index",
+      description: "Processing documentation",
       preview: (
         <div className="h-full flex flex-col items-center justify-center space-y-4">
           <div className="flex items-center gap-3">
@@ -146,6 +109,7 @@ export function DashboardPreview() {
     },
     {
       title: "Ready",
+      description: "Start using your RAG",
       preview: (
         <div className="h-full flex flex-col">
           <div className="border-b p-4">
@@ -165,7 +129,7 @@ export function DashboardPreview() {
               <input
                 type="text"
                 placeholder="Ask a question about your documentation..."
-                className="flex-1 px-3 py-2 rounded-md border bg-background text-sm font-mono"
+                className="flex-1 px-3 py-2 rounded-md border bg-background text-sm"
                 readOnly
               />
               <Button size="icon">
@@ -179,16 +143,30 @@ export function DashboardPreview() {
   ];
 
   React.useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentStep((prev) => (prev + 1) % steps.length);
-    }, 5000); // 5 seconds per step
+    if (activeTab === "dashboard") {
+      const timer = setInterval(() => {
+        setCurrentStep((prev) => (prev + 1) % steps.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
+  }, [steps.length, activeTab]);
 
-    return () => clearInterval(timer);
-  }, []);
+  React.useEffect(() => {
+    if (activeTab === "code") {
+      setShowCode(true);
+    } else {
+      setShowCode(false);
+    }
+  }, [activeTab]);
 
   return (
     <div className="mx-auto mt-16 max-w-2xl lg:max-w-4xl">
-      <Tabs defaultValue="dashboard" className="w-full">
+      <Tabs 
+        defaultValue="dashboard" 
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="code">Code</TabsTrigger>
@@ -196,17 +174,29 @@ export function DashboardPreview() {
         <TabsContent value="dashboard">
           <div className="rounded-3xl bg-background p-8 ring-1 ring-black/10 dark:ring-white/10">
             <div className="relative overflow-hidden rounded-2xl bg-black/5 dark:bg-white/5 p-2">
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap-4 mb-6">
                 {steps.map((step, index) => (
                   <motion.div
                     key={step.title}
-                    className={`h-1 flex-1 rounded-full ${
-                      index === currentStep ? "bg-primary" : "bg-primary/20"
-                    }`}
+                    className={`flex-1 ${index === currentStep ? "text-primary" : "text-muted-foreground"}`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: index * 0.1 }}
-                  />
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                        index === currentStep 
+                          ? "border-primary bg-primary/10" 
+                          : "border-muted"
+                      }`}>
+                        <span className="text-sm font-semibold">{index + 1}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium">{step.title}</span>
+                        <span className="text-xs">{step.description}</span>
+                      </div>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
               
@@ -229,23 +219,9 @@ export function DashboardPreview() {
         </TabsContent>
         <TabsContent value="code">
           <div className="rounded-3xl bg-background p-8 ring-1 ring-black/10 dark:ring-white/10">
-            <pre className="text-sm font-mono overflow-x-auto">
+            <pre className="text-sm overflow-x-auto">
               <code className="text-muted-foreground">
-                <TypeWriter 
-                  text={`import { RAGBuilder } from 'docrag';
-
-// Initialize RAG
-const rag = new RAGBuilder()
-  .addSource('./docs')
-  .setModel('gpt-4')
-  .build();
-
-// Query your docs
-const answer = await rag.query(
-  "How do I deploy to production?"
-);`}
-                  delay={30}
-                />
+                {showCode && <TypeWriter text={codeExample} delay={30} />}
               </code>
             </pre>
           </div>

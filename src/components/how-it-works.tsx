@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { DashboardPreview } from "./dashboard-preview";
-import { CodeIntegration } from "./CodeIntegration";
 
 export function HowItWorks() {
   return (
@@ -24,7 +23,6 @@ export function HowItWorks() {
         </motion.div>
 
         <DashboardPreview />
-        <CodeIntegration />
       </div>
     </section>
   );

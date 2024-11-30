@@ -1,0 +1,107 @@
+3:I[4707,[],""]
+5:I[6423,[],""]
+6:I[4698,["317","static/chunks/317-e85949e7f5e6373a.js","175","static/chunks/175-398a4546003db254.js","749","static/chunks/749-19b41e0c3154689b.js","185","static/chunks/app/layout-b7f4d8fcecfc638b.js"],"Providers"]
+7:I[9536,["317","static/chunks/317-e85949e7f5e6373a.js","175","static/chunks/175-398a4546003db254.js","749","static/chunks/749-19b41e0c3154689b.js","185","static/chunks/app/layout-b7f4d8fcecfc638b.js"],"Cursor"]
+4:["slug","building-rag-with-langchain","d"]
+0:["5zDkaiKMhkypkouUNiOt7",[[["",{"children":["blog",{"children":[["slug","building-rag-with-langchain","d"],{"children":["__PAGE__?{\"slug\":\"building-rag-with-langchain\"}",{}]}]}]},"$undefined","$undefined",true],["",{"children":["blog",{"children":[["slug","building-rag-with-langchain","d"],{"children":["__PAGE__",{},[["$L1","$L2",null],null],null]},[null,["$","$L3",null,{"parallelRouterKey":"children","segmentPath":["children","blog","children","$4","children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","notFoundStyles":"$undefined"}]],null]},[null,["$","$L3",null,{"parallelRouterKey":"children","segmentPath":["children","blog","children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":"$undefined","notFoundStyles":"$undefined"}]],null]},[[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/9287dd2f6369792d.css","precedence":"next","crossOrigin":"$undefined"}]],["$","html",null,{"lang":"en","suppressHydrationWarning":true,"children":[["$","head",null,{}],["$","body",null,{"className":"__variable_299a82 font-sans bg-background","suppressHydrationWarning":true,"children":["$","$L6",null,{"children":[["$","$L3",null,{"parallelRouterKey":"children","segmentPath":["children"],"error":"$undefined","errorStyles":"$undefined","errorScripts":"$undefined","template":["$","$L5",null,{}],"templateStyles":"$undefined","templateScripts":"$undefined","notFound":[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":"404"}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],"notFoundStyles":[]}],["$","$L7",null,{}]]}]}]]}]],null],null],["$L8",null]]]]
+9:I[1919,["317","static/chunks/317-e85949e7f5e6373a.js","175","static/chunks/175-398a4546003db254.js","739","static/chunks/739-9ed3278642e8fb5f.js","308","static/chunks/app/blog/%5Bslug%5D/page-ae8a35813dbe64d4.js"],"BlogNavbar"]
+a:T1008,<h1>Building RAG Systems with LangChain</h1>
+<p>Retrieval Augmented Generation (RAG) is a powerful technique that enhances Large Language Models (LLMs) by providing them with relevant context from your documentation. In this tutorial, we'll learn how to build a RAG system using LangChain.</p>
+<h2>What is RAG?</h2>
+<p>RAG combines the power of retrieval systems with generative AI. Instead of relying solely on the LLM's training data, RAG retrieves relevant documents from your knowledge base and uses them as context for generating responses.</p>
+<h2>Setting Up LangChain</h2>
+<p>First, install the required dependencies:</p>
+<pre><code class="language-bash">npm install langchain @langchain/openai
+</code></pre>
+<h2>Creating the Document Store</h2>
+<p>Let's create a simple document store using LangChain's document loaders:</p>
+<pre><code class="language-typescript">import { DirectoryLoader } from "langchain/document_loaders/fs/directory";
+import { TextLoader } from "langchain/document_loaders/fs/text";
+
+const loader = new DirectoryLoader(
+  "./docs",
+  {
+    ".txt": (path) => new TextLoader(path),
+  }
+);
+
+const docs = await loader.load();
+</code></pre>
+<h2>Setting Up the Vector Store</h2>
+<p>Next, we'll create embeddings and store them in a vector database:</p>
+<pre><code class="language-typescript">import { OpenAIEmbeddings } from "@langchain/openai";
+import { MemoryVectorStore } from "langchain/vectorstores/memory";
+
+const embeddings = new OpenAIEmbeddings();
+const vectorStore = await MemoryVectorStore.fromDocuments(
+  docs,
+  embeddings
+);
+</code></pre>
+<h2>Creating the RAG Chain</h2>
+<p>Now we can create a RAG chain that combines retrieval with generation:</p>
+<pre><code class="language-typescript">import { ChatOpenAI } from "@langchain/openai";
+import { createRetrievalChain } from "langchain/chains/retrieval";
+import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+
+const prompt = ChatPromptTemplate.fromTemplate(`
+Answer the following question using only the provided context. If you cannot
+answer the question with the context, say "I don't have enough information."
+
+Context: {context}
+
+Question: {input}
+`);
+
+const model = new ChatOpenAI({
+  modelName: "gpt-4",
+  temperature: 0.7,
+});
+
+const documentChain = await createStuffDocumentsChain({
+  llm: model,
+  prompt,
+});
+
+const retriever = vectorStore.asRetriever();
+const retrievalChain = await createRetrievalChain({
+  combineDocsChain: documentChain,
+  retriever,
+});
+</code></pre>
+<h2>Using the RAG System</h2>
+<p>Finally, we can use our RAG system to answer questions:</p>
+<pre><code class="language-typescript">const response = await retrievalChain.invoke({
+  input: "How do I deploy to production?",
+});
+
+console.log(response.answer);
+</code></pre>
+<h2>Best Practices</h2>
+<ol>
+<li>
+<p><strong>Document Chunking</strong>: Choose appropriate chunk sizes for your documents. Too large chunks can dilute relevance, while too small chunks might lose context.</p>
+</li>
+<li>
+<p><strong>Embeddings</strong>: Use embeddings that are appropriate for your domain. OpenAI's embeddings work well for general text, but you might want specialized embeddings for technical documentation.</p>
+</li>
+<li>
+<p><strong>Prompt Engineering</strong>: Carefully design your prompts to guide the model in using the retrieved context effectively.</p>
+</li>
+<li>
+<p><strong>Evaluation</strong>: Regularly evaluate your RAG system's performance using metrics like relevance and answer accuracy.</p>
+</li>
+</ol>
+<h2>Conclusion</h2>
+<p>RAG is a powerful way to enhance LLMs with your own documentation. By following this tutorial, you've learned how to:</p>
+<ul>
+<li>Set up a document store with LangChain</li>
+<li>Create embeddings and store them in a vector database</li>
+<li>Build a RAG chain that combines retrieval and generation</li>
+<li>Use the system to answer questions about your documentation</li>
+</ul>
+<p>For more advanced topics, check out LangChain's documentation on streaming responses, custom retrievers, and advanced RAG patterns.</p>
+2:["$","div",null,{"className":"min-h-screen bg-background","children":[["$","$L9",null,{}],["$","main",null,{"className":"container mx-auto px-4 py-24","children":["$","article",null,{"className":"prose prose-lg dark:prose-invert mx-auto","children":[["$","header",null,{"className":"text-center mb-16 not-prose","children":[["$","h1",null,{"className":"text-4xl font-bold tracking-tight gradient-text sm:text-5xl mb-4","children":"Building RAG Systems with LangChain"}],["$","time",null,{"className":"text-muted-foreground","children":"2024-01-10"}]]}],["$","div",null,{"className":"markdown","dangerouslySetInnerHTML":{"__html":"$a"}}]]}]}]]}]
+8:[["$","meta","0",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","1",{"charSet":"utf-8"}],["$","title","2",{"children":"DocRAG - Instant RAG for Your Docs"}],["$","meta","3",{"name":"description","content":"The fastest way to build RAG over any documentation"}],["$","meta","4",{"name":"next-size-adjust"}]]
+1:null

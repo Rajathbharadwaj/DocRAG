@@ -40,7 +40,7 @@ export function CodeIntegration() {
               <code className="text-muted-foreground">
                 <TypeWriter 
                   text={`import { RAGBuilder } from 'docrag';
-
+      
 // Initialize and configure RAG
 const rag = new RAGBuilder()
   .addSource('./docs')
@@ -52,9 +52,7 @@ const rag = new RAGBuilder()
 // Start querying your documentation
 const answer = await rag.query(
   "How do I deploy to production?"
-);`}
-                  delay={30}
-                />
+);`} delay={30} />
               </code>
             </pre>
           </div>

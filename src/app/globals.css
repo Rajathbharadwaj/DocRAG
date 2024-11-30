@@ -48,15 +48,16 @@
     --ring: 224.3 76.3% 48%;
   }
 }
- 
+
 @layer base {
   * {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    scroll-behavior: smooth;
+    @apply bg-background text-foreground cursor-none;
+  }
+  a, button, [role="button"] {
+    @apply cursor-none;
   }
 }
 
@@ -70,41 +71,4 @@
     rgba(59, 130, 246, 0.08) 0%,
     rgba(59, 130, 246, 0) 50%
   );
-}
-
-@keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-  100% {
-    transform: translateY(0px);
-  }
-}
-
-.float-animation {
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes progress {
-  from { width: 0%; }
-  to { width: 100%; }
-}
-
-.animate-progress {
-  animation: progress 2s ease-in-out infinite;
-}
-
-/* Hide cursor when custom cursor is active */
-@media (pointer: fine) {
-  * {
-    cursor: none !important;
-  }
-}
-
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
 }

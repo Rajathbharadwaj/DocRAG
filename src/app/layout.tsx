@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
-import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
+import { neutrifStudio } from "@/config/fonts";
+import { Providers } from "@/components/providers";
 import { Cursor } from "@/components/cursor";
-
-const jetbrainsMono = JetBrains_Mono({ 
-  subsets: ["latin"],
-});
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DocRAG - Instant RAG for Your Docs",
@@ -21,16 +17,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head />
-      <body className={`${jetbrainsMono.className} overflow-x-hidden`} suppressHydrationWarning>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <Cursor />
+      <body 
+        className={`${neutrifStudio.variable} font-sans bg-background`}
+        suppressHydrationWarning
+      >
+        <Providers>
           {children}
-        </ThemeProvider>
+          <Cursor />
+        </Providers>
       </body>
     </html>
   );
