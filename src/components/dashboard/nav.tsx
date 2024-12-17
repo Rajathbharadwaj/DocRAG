@@ -9,7 +9,7 @@ export function DashboardNav() {
           DocRAG
         </Link>
         <nav className="flex items-center gap-6">
-          <Link href="/dashboard/projects" className="text-sm hover:text-primary">
+          <Link href="/dashboard" className="text-sm hover:text-primary">
             Projects
           </Link>
           <Link href="/dashboard/settings" className="text-sm hover:text-primary">

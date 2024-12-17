@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { neutrifStudio } from "@/config/fonts";
 import { Providers } from "@/components/providers";
 import { Cursor } from "@/components/cursor";
+import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,17 +16,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head />
-      <body 
-        className={`${neutrifStudio.variable} font-sans bg-background`}
-        suppressHydrationWarning
-      >
-        <Providers>
-          {children}
-          <Cursor />
-        </Providers>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <head />
+        <body 
+          className={`${neutrifStudio.variable} font-sans bg-background`}
+          suppressHydrationWarning
+        >
+          <Providers>
+            {children}
+            <Cursor />
+          </Providers>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
