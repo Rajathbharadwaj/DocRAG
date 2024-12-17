@@ -1,6 +1,7 @@
 {
-  "/api/supabase-token/route": "app/api/supabase-token/route.js",
   "/api/projects/route": "app/api/projects/route.js",
-  "/chat/[projectId]/page": "app/chat/[projectId]/page.js",
+  "/sign-up/[[...sign-up]]/page": "app/sign-up/[[...sign-up]]/page.js",
+  "/page": "app/page.js",
+  "/sign-in/page": "app/sign-in/page.js",
   "/dashboard/page": "app/dashboard/page.js"
 }

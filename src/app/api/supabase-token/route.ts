@@ -3,18 +3,25 @@ import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   try {
-    const session = auth();
+    const session = await auth();
     const user = await currentUser();
 
-    console.log("Auth session:", {
-      sessionId: session.sessionId,
-      userId: session.userId,
+    // Log initial auth state
+    console.log("[/api/supabase-token] Initial auth state:", {
+      hasSession: !!session,
+      sessionId: session?.sessionId,
+      userId: session?.userId,
       hasUser: !!user
     });
 
-    if (!user || !session.userId) {
-      console.error("No authenticated user found");
-      return new NextResponse("Unauthorized - No user found", { status: 401 });
+    if (!session?.userId || !user) {
+      console.error("[/api/supabase-token] No authenticated user found");
+      return new NextResponse(JSON.stringify({ error: "Unauthorized - No user found" }), { 
+        status: 401,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
 
     // Get the session token from Clerk with specific JWT template
@@ -23,20 +30,40 @@ export async function GET(request: Request) {
     });
 
     if (!token) {
-      console.error("Failed to generate token for user:", session.userId);
-      return new NextResponse("Failed to generate token", { status: 500 });
+      console.error("[/api/supabase-token] Failed to generate token for user:", session.userId);
+      return new NextResponse(
+        JSON.stringify({ error: "Failed to generate token" }), 
+        { 
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
     }
 
-    // Log token for debugging (remove in production)
-    console.log("Generated token:", {
+    // Log successful token generation
+    console.log("[/api/supabase-token] Generated token successfully:", {
       userId: session.userId,
       hasToken: !!token,
       tokenLength: token.length
     });
 
-    return NextResponse.json({ token });
+    return new NextResponse(JSON.stringify({ token }), { 
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   } catch (error) {
-    console.error("Error generating token:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+    console.error("[/api/supabase-token] Error generating token:", error);
+    return new NextResponse(
+      JSON.stringify({ error: "Internal Server Error" }), 
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
   }
 }

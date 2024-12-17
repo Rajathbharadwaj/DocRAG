@@ -13,3 +13,36 @@ export interface Post {
   author: Author;
   featured?: boolean;
 }
+
+export enum ContentType {
+  ARTICLE = "article",
+  DOCUMENTATION = "documentation",
+  MEDIA = "media",
+  ACADEMIC = "academic",
+  GITHUB = "github",
+  STACKOVERFLOW = "stackoverflow",
+  API = "api"
+}
+
+export interface IndexingStatus {
+  status: 'processing' | 'complete' | 'error';
+  urls_processed: number;
+  urls_queued: number;
+  is_complete: boolean;
+  background_task_active: boolean;
+  visited_urls: string[];
+  queued_urls: string[];
+}
+
+export interface IndexingResponse {
+  status: string;
+  message: string;
+  doc_name: string;
+}
+
+export interface ProjectFormData {
+  name: string;
+  url: string;
+  description: string;
+  contentType: ContentType;
+}

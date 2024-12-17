@@ -2,18 +2,16 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/ui/use-toast";
+import { useUser } from "@clerk/nextjs";
+import { createSupabaseClient } from "@/lib/supabase";
+import { ContentType, ProjectFormData } from "@/lib/types";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
 
 export function CreateProjectDialog({
   open,
@@ -22,9 +20,11 @@ export function CreateProjectDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [contentType, setContentType] = useState<ContentType>(ContentType.DOCUMENTATION);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,7 +35,7 @@ export function CreateProjectDialog({
     const url = formData.get("url") as string;
     const description = formData.get("description") as string;
 
-    console.log("[CreateProject] Submitting form:", { name, url, description });
+    console.log("[CreateProject] Submitting form:", { name, url, description, contentType });
 
     try {
       const response = await fetch("/api/projects", {
@@ -43,38 +43,29 @@ export function CreateProjectDialog({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, url, description }),
+        body: JSON.stringify({ name, url, description, contentType }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[CreateProject] Error response:", { status: response.status, text: errorText });
-        throw new Error(`Failed to create project: ${errorText}`);
+        const error = await response.text();
+        throw new Error(error);
       }
 
-      const data = await response.json();
-      console.log("[CreateProject] Success:", data);
-
-      if (!data.id) {
-        throw new Error("No project ID returned");
-      }
-
+      const project = await response.json();
+      
       toast({
         title: "Success",
-        description: "Your project has been created.",
+        description: "Project created successfully. Redirecting to chat...",
       });
-      
-      // Close the dialog first
+
+      // Redirect to chat page
+      router.push(`/chat/${project.id}`);
       onOpenChange(false);
-      
-      // Then navigate to the chat page
-      console.log("[CreateProject] Navigating to:", `/chat/${data.id}`);
-      router.push(`/chat/${data.id}`);
     } catch (error) {
-      console.error(error);
+      console.error("[CreateProject] Error:", error);
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create project",
         variant: "destructive",
       });
     } finally {
@@ -86,53 +77,62 @@ export function CreateProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
+          <DialogTitle>Create Project</DialogTitle>
           <DialogDescription>
-            Create a new RAG project to start adding your documents.
+            Add a new documentation project to chat with
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Project Name</Label>
+          <div>
+            <Label htmlFor="name">Name</Label>
             <Input
               id="name"
               name="name"
-              placeholder="My Awesome Project"
+              placeholder="Project name"
               required
-              disabled={isLoading}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="url">Project URL</Label>
+          <div>
+            <Label htmlFor="url">Documentation URL</Label>
             <Input
               id="url"
               name="url"
-              placeholder="https://example.com"
               type="url"
+              placeholder="https://docs.example.com"
               required
-              disabled={isLoading}
             />
           </div>
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
               name="description"
-              placeholder="A brief description of your project"
-              disabled={isLoading}
+              placeholder="Brief description of the project"
+              required
             />
           </div>
-          <div className="flex justify-end space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading}
+          <div>
+            <Label htmlFor="contentType">Content Type</Label>
+            <select
+              id="contentType"
+              className="w-full rounded-md border border-input bg-background px-3 py-2"
+              value={contentType}
+              onChange={(e) => setContentType(e.target.value as ContentType)}
             >
-              Cancel
-            </Button>
+              <option value={ContentType.DOCUMENTATION}>Documentation</option>
+              <option value={ContentType.REPOSITORY}>Repository</option>
+            </select>
+          </div>
+          <div className="flex justify-end">
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Creating..." : "Create Project"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Project"
+              )}
             </Button>
           </div>
         </form>

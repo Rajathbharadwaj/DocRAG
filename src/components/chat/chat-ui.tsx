@@ -8,11 +8,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { Message } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { useUser } from "@clerk/nextjs";
-import { useClerk } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { supabase, createSupabaseClient, Message as SupabaseMessage } from "@/lib/supabase";
 import { SignedIn } from "@clerk/nextjs";
-import { LogOut, Send, Bot, User, Check, Loader2 } from "lucide-react";
+import { LogOut, Send, Bot, User, Check, Loader2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { Progress } from "@/components/ui/progress";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -27,7 +28,7 @@ interface ChatUIProps {
 
 export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIProps) {
   const { user, isLoaded: isUserLoaded } = useUser();
-  const { signOut } = useClerk();
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -35,6 +36,103 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isIndexing, setIsIndexing] = useState(false);
+  const [docName, setDocName] = useState<string | null>(null);
+  const [indexingProgress, setIndexingProgress] = useState(0);
+
+  const checkIndexingStatus = async () => {
+    if (!docName) return;
+    
+    try {
+      const response = await fetch(`/api/indexing-status/${docName}`);
+      const data = await response.json();
+      
+      console.log("[ChatUI] Indexing status:", data);
+      
+      if (data.error) {
+        console.error("[ChatUI] Indexing error:", data.error);
+        toast({
+          title: "Indexing Error",
+          description: data.error,
+          variant: "destructive",
+          className: "fixed top-4 right-4"
+        });
+        setIsIndexing(false);
+        return;
+      }
+      
+      // Calculate progress percentage (0-100)
+      const progress = data.urls_processed > 0 ? 100 : 
+                      data.urls_queued > 0 ? (data.urls_processed / (data.urls_processed + data.urls_queued)) * 100 : 0;
+      
+      setIndexingProgress(progress);
+      
+      // Check if at least one URL is processed
+      if (data.urls_processed >= 1) {
+        setIsIndexing(false);
+        setIndexingProgress(100);
+        toast({
+          title: "Ready",
+          description: "You can now start chatting!",
+          variant: "default",
+          className: "fixed top-4 right-4"
+        });
+        return;
+      }
+      
+      // Show processing toast if still indexing
+      toast({
+        title: "Processing",
+        description: `Indexing progress: ${Math.round(progress)}%`,
+        variant: "default",
+        className: "fixed top-4 right-4"
+      });
+      
+      // Continue checking status every 2 seconds
+      setTimeout(checkIndexingStatus, 2000);
+    } catch (error) {
+      console.error('[ChatUI] Error checking indexing status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to check indexing status",
+        variant: "destructive",
+        className: "fixed top-4 right-4"
+      });
+      setIsIndexing(false);
+    }
+  };
+
+  const loadProjectDetails = async () => {
+    try {
+      const response = await fetch("/api/supabase-token");
+      if (!response.ok) throw new Error(`Failed to fetch token: ${response.statusText}`);
+      
+      const { token } = await response.json();
+      if (!token) throw new Error("No token received");
+      
+      const supabaseClient = createSupabaseClient(token);
+      
+      const { data: project, error } = await supabaseClient
+        .from("projects")
+        .select("*")
+        .eq("id", projectId)
+        .single();
+
+      if (error) throw error;
+      if (!project) throw new Error("Project not found");
+
+      setDocName(project.doc_name);
+      if (project.doc_name) {
+        setIsIndexing(true); // Only set to true if we have a doc_name
+        checkIndexingStatus();
+      } else {
+        setIsIndexing(false); // Set to false if no doc_name
+      }
+    } catch (error) {
+      console.error("[ChatUI] Error loading project details:", error);
+      setIsIndexing(false); // Set to false on error
+    }
+  };
 
   const loadMessages = async () => {
     try {
@@ -91,6 +189,7 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
   useEffect(() => {
     if (projectId && isUserLoaded) {
       loadMessages();
+      loadProjectDetails();
     }
   }, [projectId, isUserLoaded]);
 
@@ -101,145 +200,142 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !user) return;
+    
+    if (isIndexing) {
+      toast({
+        title: "Still indexing",
+        description: "Please wait for the content to be indexed before sending messages",
+        variant: "destructive",
+        className: "fixed top-4 right-4"
+      });
+      return;
+    }
 
-    const userMessage: ChatMessage = {
-      role: "user",
-      content: input.trim()
-    };
+    if (!input.trim()) return;
+
+    const userMessage = input.trim();
+    setInput("");
+    setMessages((messages) => [
+      ...messages,
+      { role: "user", content: userMessage },
+    ]);
 
     try {
-      const response = await fetch("/api/supabase-token");
+      setIsStreaming(true);
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          projectId,
+        }),
+      });
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch token: ${response.statusText}`);
-      }
-      
-      const { token } = await response.json();
-      if (!token) {
-        throw new Error("No token received");
+        throw new Error(await response.text());
       }
 
-      setMessages(prev => [...prev, userMessage]);
-      setInput("");
-      
-      const supabaseClient = createSupabaseClient(token);
-
-      // Insert the user message
-      const { error: insertError } = await supabaseClient
-        .from("messages")
-        .insert({
-          project_id: projectId,
-          user_id: user.id,
-          role: userMessage.role,
-          content: userMessage.content
-        });
-
-      if (insertError) {
-        console.error("[ChatUI] Failed to insert message:", insertError);
-        throw insertError;
-      }
-
-      // Simulate assistant response
-      const assistantMessage: ChatMessage = {
-        role: "assistant",
-        content: "This is a simulated response. Replace with actual AI response."
-      };
-
-      // Insert the assistant message
-      const { error: assistantError } = await supabaseClient
-        .from("messages")
-        .insert({
-          project_id: projectId,
-          user_id: user.id,
-          role: assistantMessage.role,
-          content: assistantMessage.content
-        });
-
-      if (assistantError) {
-        console.error("[ChatUI] Failed to insert assistant message:", assistantError);
-        throw assistantError;
-      }
-
-      setMessages(prev => [...prev, assistantMessage]);
+      const data = await response.json();
+      setMessages((messages) => [
+        ...messages,
+        { role: "assistant", content: data.content },
+      ]);
     } catch (error) {
-      console.error("[ChatUI] Error in chat:", error);
-      setError(error instanceof Error ? error.message : "Failed to send message");
+      console.error("[ChatUI] Error sending message:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to send message",
         variant: "destructive",
+        className: "fixed top-4 right-4"
       });
+    } finally {
+      setIsStreaming(false);
     }
   };
 
   return (
-    <SignedIn>
-      <Card className="flex h-[85vh] flex-col">
-        <div className="flex items-center justify-between border-b px-6 py-2">
-          <div className="flex items-center gap-2">
-            <Check className="h-5 w-5 text-green-500" />
+    <div className="flex flex-col h-full">
+      <div className="border-b">
+        <div className="flex h-14 items-center px-4 justify-between">
+          <div className="flex items-center space-x-4">
+            <Bot className="h-6 w-6" />
             <div>
-              <h1 className="text-lg font-semibold">{projectName}</h1>
-              <p className="text-sm text-muted-foreground">
-                Ask questions about your documentation
-              </p>
+              <h2 className="text-lg font-semibold">{projectName}</h2>
+              {user && (
+                <p className="text-sm text-muted-foreground">
+                  Signed in as {user.firstName}
+                </p>
+              )}
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => signOut()}
-            className="h-8 w-8"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/dashboard')}
+              title="Back to Projects"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
-        <ScrollArea className="flex-1 p-4">
+      </div>
+
+      <Card className="flex-1 p-4 space-y-4">
+        <ScrollArea className="h-[calc(100vh-12rem)]">
           <div className="space-y-4">
             {messages.map((message, index) => (
               <div
                 key={index}
                 className={cn(
-                  "flex w-max max-w-[80%] items-end gap-2 rounded-lg px-4 py-2",
-                  message.role === "user"
-                    ? "ml-auto bg-primary text-primary-foreground"
-                    : "bg-muted"
+                  "flex w-full",
+                  message.role === "assistant" ? "justify-start" : "justify-end"
                 )}
               >
-                {message.role === "user" ? (
-                  <User className="h-4 w-4" />
-                ) : (
-                  <Bot className="h-4 w-4" />
-                )}
-                <p className="text-sm">{message.content}</p>
+                <div
+                  className={cn(
+                    "rounded-lg px-3 py-2 max-w-[80%] space-y-2",
+                    message.role === "assistant"
+                      ? "bg-muted"
+                      : "bg-primary text-primary-foreground"
+                  )}
+                >
+                  {message.content}
+                </div>
               </div>
             ))}
-            {isLoading && (
-              <div className="flex items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin" />
+            {isStreaming && (
+              <div className="flex justify-start">
+                <div className="rounded-lg px-3 py-2 max-w-[80%] space-y-2 bg-muted">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
-        <form onSubmit={handleSubmit} className="border-t p-4">
-          <div className="flex gap-4">
-            <Input
-              placeholder="Type your message..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={isStreaming}
-            />
-            <Button type="submit" disabled={isStreaming}>
-              {isStreaming ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-        </form>
       </Card>
-    </SignedIn>
+
+      <form onSubmit={handleSubmit} className="pt-4 space-x-2 flex">
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your message..."
+          disabled={isStreaming}
+        />
+        <Button 
+          type="submit" 
+          disabled={isStreaming || isIndexing || !input.trim()}
+        >
+          {isStreaming ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
+      </form>
+    </div>
   );
 }

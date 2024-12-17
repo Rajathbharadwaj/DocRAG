@@ -1,37 +1,38 @@
-import { headers } from "next/headers";
-import { WebhookEvent } from "@clerk/nextjs/server";
-import { createSupabaseClient } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { createSupabaseClient } from "@/lib/supabase";
+import { WebhookEvent } from "@clerk/nextjs/server";
 
 export async function POST(req: Request) {
   try {
-    // Get the headers
-    const headerPayload = headers();
-    const svix_id = headerPayload.get("svix-id");
-    const svix_timestamp = headerPayload.get("svix-timestamp");
-    const svix_signature = headerPayload.get("svix-signature");
+    // Get the request body
+    const payload = await req.json();
+    console.log("[WEBHOOK] Received webhook payload:", payload);
+
+    // Get the headers from the request directly
+    const svix_id = req.headers.get('svix-id');
+    const svix_timestamp = req.headers.get('svix-timestamp');
+    const svix_signature = req.headers.get('svix-signature');
 
     // If there are no headers, error out
     if (!svix_id || !svix_timestamp || !svix_signature) {
-      return new NextResponse("Error occured -- no svix headers", {
+      console.error("[WEBHOOK] Missing Svix headers");
+      return new NextResponse("Error occurred -- missing Svix headers", {
         status: 400,
       });
     }
 
-    // Get the body
-    const payload = await req.json();
-    const body = JSON.stringify(payload);
+    // Process the webhook payload
+    const evt = payload as WebhookEvent;
+    const { type, data } = evt;
+    console.log("[WEBHOOK] Processing webhook of type:", type);
 
     // Create a new Supabase admin client
     const supabaseClient = createSupabaseClient();
 
     // Handle the webhook
-    const evt = payload as WebhookEvent;
-    const { id, ...attributes } = evt.data;
+    const { id, ...attributes } = data;
 
-    console.log("Webhook body:", body);
-
-    if (evt.type === "user.created" || evt.type === "user.updated") {
+    if (type === "user.created" || type === "user.updated") {
       // For user.created or user.updated, set their role in Supabase
       const role = "authenticated";
 
