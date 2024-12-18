@@ -12,8 +12,9 @@ import { useRouter } from "next/navigation";
 import { supabase, createSupabaseClient, Message as SupabaseMessage } from "@/lib/supabase";
 import { SignedIn } from "@clerk/nextjs";
 import { LogOut, Send, Bot, User, Check, Loader2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Progress } from "@/components/ui/progress";
+import { Project } from "@/lib/types";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -21,24 +22,23 @@ interface ChatMessage {
 }
 
 interface ChatUIProps {
-  projectId: string;
-  projectUrl?: string;
-  projectName?: string;
+  project: Project;
 }
 
-export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIProps) {
+export function ChatUI({ project: initialProject }: ChatUIProps) {
   const { user, isLoaded: isUserLoaded } = useUser();
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [project, setProject] = useState(initialProject);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isIndexing, setIsIndexing] = useState(false);
-  const [docName, setDocName] = useState<string | null>(null);
+  const [docName, setDocName] = useState("");
   const [indexingProgress, setIndexingProgress] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const checkIndexingStatus = async () => {
     if (!docName) return;
@@ -102,44 +102,48 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
     }
   };
 
-  const loadProjectDetails = async () => {
+  const loadProjectDetails = useCallback(async () => {
     try {
       const response = await fetch("/api/supabase-token");
       if (!response.ok) throw new Error(`Failed to fetch token: ${response.statusText}`);
-      
       const { token } = await response.json();
       if (!token) throw new Error("No token received");
       
       const supabaseClient = createSupabaseClient(token);
-      
-      const { data: project, error } = await supabaseClient
+      console.log("[ChatUI] Loading project details for project:", project?.id);
+      const { data, error } = await supabaseClient
         .from("projects")
         .select("*")
-        .eq("id", projectId)
+        .eq("id", project?.id)
         .single();
 
-      if (error) throw error;
-      if (!project) throw new Error("Project not found");
+      if (error) {
+        console.error("[ChatUI] Error loading project details:", error);
+        throw error;
+      }
 
-      setDocName(project.doc_name);
-      if (project.doc_name) {
-        setIsIndexing(true); // Only set to true if we have a doc_name
-        checkIndexingStatus();
-      } else {
-        setIsIndexing(false); // Set to false if no doc_name
+      if (data) {
+        console.log("[ChatUI] Project details loaded:", data);
+        setProject(data);
+        setDocName(data.doc_name || "");
+        if (data.doc_name) {
+          setIsIndexing(true);
+          checkIndexingStatus();
+        } else {
+          setIsIndexing(false);
+        }
       }
     } catch (error) {
       console.error("[ChatUI] Error loading project details:", error);
-      setIsIndexing(false); // Set to false on error
     }
-  };
+  }, [project?.id]);
 
   const loadMessages = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log("[ChatUI] Loading messages for project:", projectId);
+      console.log("[ChatUI] Loading messages for project:", project?.id);
       
       // Get the token for authenticated requests
       const response = await fetch("/api/supabase-token");
@@ -158,7 +162,7 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
       const { data: messages, error } = await supabaseClient
         .from("messages")
         .select("*")
-        .eq("project_id", projectId)
+        .eq("project_id", project?.id)
         .order("created_at", { ascending: true });
 
       if (error) {
@@ -167,7 +171,7 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
       }
 
       if (!messages) {
-        console.log("[ChatUI] No messages found for project:", projectId);
+        console.log("[ChatUI] No messages found for project:", project?.id);
         return;
       }
 
@@ -187,11 +191,11 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
   };
 
   useEffect(() => {
-    if (projectId && isUserLoaded) {
+    if (project?.id && isUserLoaded) {
       loadMessages();
       loadProjectDetails();
     }
-  }, [projectId, isUserLoaded]);
+  }, [project?.id, isUserLoaded]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -229,7 +233,8 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
         },
         body: JSON.stringify({
           message: userMessage,
-          projectId,
+          projectId: project?.id,
+          docName: project?.doc_name,
         }),
       });
 
@@ -262,7 +267,7 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
           <div className="flex items-center space-x-4">
             <Bot className="h-6 w-6" />
             <div>
-              <h2 className="text-lg font-semibold">{projectName}</h2>
+              <h2 className="text-lg font-semibold">{project?.name}</h2>
               {user && (
                 <p className="text-sm text-muted-foreground">
                   Signed in as {user.firstName}
@@ -308,7 +313,7 @@ export function ChatUI({ projectId, projectName = "Company Docs RAG" }: ChatUIPr
             ))}
             {isStreaming && (
               <div className="flex justify-start">
-                <div className="rounded-lg px-3 py-2 max-w-[80%] space-y-2 bg-muted">
+                <div className="rounded-lg px-3 py-2 max-w-[80%] bg-muted">
                   <Loader2 className="h-4 w-4 animate-spin" />
                 </div>
               </div>

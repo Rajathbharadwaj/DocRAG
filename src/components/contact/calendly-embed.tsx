@@ -1,47 +1,17 @@
 "use client";
 
-import Script from "next/script";
 import { useEffect, useState } from "react";
+import Script from "next/script";
 
-const CALENDLY_URL = "https://calendly.com/rjdevbharadwaj/30min";
-const MEETING_DESCRIPTION = `🚀 DocRAG Consultation Call
-
-During this 30-minute call, we'll discuss:
-• Your current documentation challenges and needs
-• How DocRAG can transform your documentation into an intelligent knowledge base
-• Custom implementation strategies for your specific use case
-• Pricing and deployment options that fit your scale
-
-Please come prepared with:
-• Brief overview of your current documentation setup
-• Key challenges you're looking to solve
-• Any specific questions about DocRAG's features
-
-After the call, you'll receive:
-• A personalized implementation plan
-• Pricing details tailored to your needs
-• Next steps for getting started with DocRAG
-
-Looking forward to showing you how DocRAG can revolutionize your documentation experience!`;
+const CALENDLY_URL = "https://calendly.com/rjdevbharadwaj/docrag-meeting-call";
 
 export function CalendlyEmbed() {
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
-    <>
-      <Script
-        src="https://assets.calendly.com/assets/external/widget.js"
-        strategy="lazyOnload"
-        onLoad={() => setIsLoading(false)}
-      />
-      
+    <div className="relative">
       {isLoading && (
-        <div className="flex items-center justify-center min-h-[700px]">
+        <div className="absolute inset-0 flex items-center justify-center">
           <div className="animate-pulse text-muted-foreground">
             Loading calendar...
           </div>
@@ -49,15 +19,22 @@ export function CalendlyEmbed() {
       )}
       
       <div 
-        className={`calendly-inline-widget w-full ${isLoading ? 'hidden' : 'block'}`}
-        style={{ minHeight: '700px' }}
+        className="calendly-inline-widget" 
         data-url={CALENDLY_URL}
-        data-prefill={JSON.stringify({
-          customAnswers: {
-            a1: MEETING_DESCRIPTION
-          }
-        })}
+        style={{
+          minWidth: "320px",
+          height: "1000px",
+          visibility: isLoading ? 'hidden' : 'visible'
+        }}
       />
-    </>
+
+      <Script
+        src="https://assets.calendly.com/assets/external/widget.js"
+        strategy="lazyOnload"
+        onLoad={() => {
+          setTimeout(() => setIsLoading(false), 500);
+        }}
+      />
+    </div>
   );
 }

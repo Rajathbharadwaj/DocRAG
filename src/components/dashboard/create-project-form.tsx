@@ -4,14 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@clerk/nextjs";
-import { createSupabaseClient } from "@/lib/supabase";
-import { ContentType, ProjectFormData } from "@/lib/types";
+import { ContentType } from "@/lib/types";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function CreateProjectDialog({
   open,
@@ -31,11 +31,12 @@ export function CreateProjectDialog({
     setIsLoading(true);
 
     const formData = new FormData(event.currentTarget);
-    const name = formData.get("name") as string;
-    const url = formData.get("url") as string;
-    const description = formData.get("description") as string;
-
-    console.log("[CreateProject] Submitting form:", { name, url, description, contentType });
+    const data = {
+      name: formData.get("name") as string,
+      url: formData.get("url") as string,
+      description: formData.get("description") as string,
+      contentType
+    };
 
     try {
       const response = await fetch("/api/projects", {
@@ -43,7 +44,7 @@ export function CreateProjectDialog({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, url, description, contentType }),
+        body: JSON.stringify({ data }),
       });
 
       if (!response.ok) {
@@ -58,7 +59,6 @@ export function CreateProjectDialog({
         description: "Project created successfully. Redirecting to chat...",
       });
 
-      // Redirect to chat page
       router.push(`/chat/${project.id}`);
       onOpenChange(false);
     } catch (error) {
@@ -113,28 +113,29 @@ export function CreateProjectDialog({
           </div>
           <div>
             <Label htmlFor="contentType">Content Type</Label>
-            <select
-              id="contentType"
-              className="w-full rounded-md border border-input bg-background px-3 py-2"
-              value={contentType}
-              onChange={(e) => setContentType(e.target.value as ContentType)}
-            >
-              <option value={ContentType.DOCUMENTATION}>Documentation</option>
-              <option value={ContentType.REPOSITORY}>Repository</option>
-            </select>
+            <Select value={contentType} onValueChange={(value) => setContentType(value as ContentType)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select content type" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(ContentType).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Project"
-              )}
-            </Button>
-          </div>
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create Project"
+            )}
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

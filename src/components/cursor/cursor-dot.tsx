@@ -10,10 +10,22 @@ interface CursorDotProps {
 export function CursorDot({ position, clicked }: CursorDotProps) {
   return (
     <motion.div
-      className="fixed left-0 top-0 z-[9999] h-2 w-2 rounded-full bg-primary pointer-events-none mix-blend-difference"
+      style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        zIndex: 999999,
+        height: '8px',
+        width: '8px',
+        borderRadius: '50%',
+        backgroundColor: 'white',
+        pointerEvents: 'none',
+        mixBlendMode: 'difference',
+        willChange: 'transform',
+      }}
       animate={{
-        x: position.x - 1,
-        y: position.y - 1,
+        x: position.x - 4,
+        y: position.y - 4,
         scale: clicked ? 0.5 : 1,
       }}
       transition={{ 

@@ -1,7 +1,8 @@
-import { ChatUI } from "@/components/chat/chat-ui";
-import { createSupabaseClient } from "@/lib/supabase";
+import { auth } from '@clerk/nextjs/server';
 import { redirect } from "next/navigation";
-import { auth } from "@clerk/nextjs";
+import { createSupabaseClient } from "@/lib/supabase";
+import { ChatUI } from "@/components/chat/chat-ui";
+import { headers } from "next/headers";
 
 interface ChatPageProps {
   params: {
@@ -10,66 +11,44 @@ interface ChatPageProps {
 }
 
 export default async function ChatPage({ params }: ChatPageProps) {
-  const { projectId } = params;
-  const session = auth();
-  const { userId } = session;
+  // Wait for params to be available
+  const { projectId } = await params;
+
+  const headersList = headers();
+  const { userId, getToken } = await auth();
+  console.log("[CHAT_PAGE] Initial auth state:", {
+    userId,
+  });
 
   if (!userId) {
-    console.error("[ChatPage] No user ID found");
+    console.error("[CHAT_PAGE] No user ID found");
     redirect("/sign-in");
   }
 
-  console.log("[ChatPage] Loading project:", { projectId, userId });
+  const token = await getToken({
+    template: "supabase",
+  });
+  console.log("[CHAT_PAGE] Supabase token:", token);
   
-  try {
-    // Get token for Supabase authentication
-    const token = await session.getToken({
-      template: "supabase"
-    });
+  if (!token) {
+    throw new Error("Failed to get authentication token");
+  }
 
-    if (!token) {
-      console.error("[ChatPage] Failed to get Supabase token");
-      redirect("/dashboard");
-    }
+  const supabaseClient = createSupabaseClient(token);
+  const { data: project, error } = await supabaseClient
+    .from("projects")
+    .select("*")
+    .eq("id", projectId)
+    .eq("user_id", userId)
+    .single();
 
-    const supabase = createSupabaseClient(token);
-
-    // Fetch project details
-    const { data: project, error } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("id", projectId)
-      .eq("user_id", userId)
-      .single();
-
-    console.log("[ChatPage] Project query result:", {
-      project,
-      error,
-      projectId,
-      userId
-    });
-
-    if (error) {
-      console.error("[ChatPage] Supabase error:", error);
-      redirect("/dashboard");
-    }
-
-    if (!project) {
-      console.error("[ChatPage] Project not found or unauthorized");
-      redirect("/dashboard");
-    }
-
-    return (
-      <div className="flex flex-col h-screen">
-        <ChatUI 
-          projectId={projectId} 
-          projectName={project.name} 
-          projectUrl={project.url} 
-        />
-      </div>
-    );
-  } catch (error) {
-    console.error("[ChatPage] Unexpected error:", error);
+  if (error || !project) {
     redirect("/dashboard");
   }
+
+  return (
+    <div className="flex h-screen flex-col">
+      <ChatUI project={project} />
+    </div>
+  );
 }

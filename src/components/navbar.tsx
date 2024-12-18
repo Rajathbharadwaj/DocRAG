@@ -6,13 +6,14 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { motion } from "framer-motion";
 import { ScrollLink } from "./navigation/scroll-link";
 import { useSmoothScroll } from "@/lib/hooks/use-smooth-scroll";
+import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 
 export function Navbar() {
   const { scrollToTop } = useSmoothScroll();
 
   return (
     <motion.header 
-      className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      className="sticky top-0 z-[9999] w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60"
       initial={{ y: -100 }}
       animate={{ y: 0 }}
     >
@@ -54,15 +55,32 @@ export function Navbar() {
         <div className="flex flex-1 items-center justify-end space-x-4">
           <nav className="flex items-center space-x-3">
             <ThemeToggle />
-            <Button variant="ghost" asChild>
-              <Link href="/waitlist">Join Waitlist</Link>
-            </Button>
-            <Button variant="ghost" asChild>
-              <Link href="/sign-in">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/sign-up">Get Started</Link>
-            </Button>
+            <SignedOut>
+              <Button variant="ghost" asChild>
+                <Link href="/waitlist">Join Waitlist</Link>
+              </Button>
+              <SignInButton mode="modal">
+                <Button variant="ghost">
+                  Sign In
+                </Button>
+              </SignInButton>
+              <Button asChild>
+                <Link href="/sign-up">Get Started</Link>
+              </Button>
+            </SignedOut>
+            <SignedIn>
+              <Button variant="ghost" asChild>
+                <Link href="/dashboard">Dashboard</Link>
+              </Button>
+              <UserButton 
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: "w-10 h-10"
+                  }
+                }}
+              />
+            </SignedIn>
           </nav>
         </div>
       </div>

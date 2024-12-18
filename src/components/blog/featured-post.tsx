@@ -5,6 +5,7 @@ import { getFeaturedPost } from "@/lib/blog";
 
 export function FeaturedPost() {
   const post = getFeaturedPost();
+  const formattedDate = formatDate(post.date);
 
   return (
     <Link 
@@ -30,7 +31,7 @@ export function FeaturedPost() {
           />
           <div>
             <div className="font-medium text-white">{post.author.name}</div>
-            <div className="text-sm text-white/80">{formatDate(post.date)}</div>
+            <div className="text-sm text-white/80">{formattedDate}</div>
           </div>
         </div>
         <h2 className="mb-4 text-3xl font-bold text-white">{post.title}</h2>

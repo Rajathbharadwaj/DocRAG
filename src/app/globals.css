@@ -82,3 +82,21 @@
     rgba(59, 130, 246, 0) 50%
   );
 }
+
+/* Calendly Overrides */
+.calendly-inline-widget {
+  background: black !important;
+}
+
+.calendly-inline-widget iframe {
+  background: black !important;
+  filter: invert(1) hue-rotate(180deg) !important;
+  @media (prefers-color-scheme: dark) {
+    background: black !important;
+  }
+}
+
+/* Hide Calendly branding */
+.calendly-badge-widget {
+  display: none !important;
+}

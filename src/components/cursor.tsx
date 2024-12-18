@@ -6,26 +6,55 @@ import { useMousePosition } from "@/lib/hooks/use-mouse-position";
 import { useCursorState } from "@/lib/hooks/use-cursor-state";
 import { CursorRing } from "@/components/cursor/cursor-ring";
 import { CursorDot } from "@/components/cursor/cursor-dot";
+import { createPortal } from "react-dom";
 
 export function Cursor() {
   const [isMounted, setIsMounted] = useState(false);
   const { position, hidden } = useMousePosition();
   const { clicked, linkHovered } = useCursorState();
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
-    document.body.style.cursor = 'none';
+    let container = document.getElementById('cursor-portal');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'cursor-portal';
+      container.style.position = 'fixed';
+      container.style.pointerEvents = 'none';
+      container.style.top = '0';
+      container.style.left = '0';
+      container.style.width = '100%';
+      container.style.height = '100%';
+      container.style.zIndex = '9999';
+      document.body.appendChild(container);
+    }
+    setPortalContainer(container);
+
+    // Only hide cursor on devices with fine pointer (mouse)
+    if (window.matchMedia('(pointer: fine)').matches) {
+      document.body.style.cursor = 'none';
+      // Force cursor to be visible initially
+      const event = new MouseEvent('mousemove', {
+        clientX: window.innerWidth / 2,
+        clientY: window.innerHeight / 2
+      });
+      document.dispatchEvent(event);
+    }
+
     return () => {
       setIsMounted(false);
       document.body.style.cursor = 'default';
+      container?.remove();
     };
   }, []);
 
-  if (!isMounted || (typeof window !== 'undefined' && !window.matchMedia('(pointer: fine)').matches)) {
+  // Don't render cursor on touch devices or when not mounted
+  if (!isMounted || !window.matchMedia('(pointer: fine)').matches || !portalContainer) {
     return null;
   }
 
-  return (
+  const cursor = (
     <AnimatePresence mode="wait">
       {!hidden && (
         <>
@@ -42,4 +71,6 @@ export function Cursor() {
       )}
     </AnimatePresence>
   );
+
+  return createPortal(cursor, portalContainer);
 }

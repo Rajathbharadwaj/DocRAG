@@ -13,7 +13,15 @@ export function CursorRing({ position, clicked, linkHovered }: CursorRingProps) 
 
   return (
     <motion.div
-      className="fixed left-0 top-0 z-[9999] pointer-events-none mix-blend-difference"
+      style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        zIndex: 999999,
+        pointerEvents: 'none',
+        mixBlendMode: 'difference',
+        willChange: 'transform',
+      }}
       animate={{
         x: position.x - size,
         y: position.y - size,
@@ -27,7 +35,14 @@ export function CursorRing({ position, clicked, linkHovered }: CursorRingProps) 
       }}
     >
       <motion.div
-        className="h-8 w-8 rounded-full bg-primary opacity-30"
+        style={{
+          height: '32px',
+          width: '32px',
+          borderRadius: '50%',
+          backgroundColor: 'white',
+          opacity: 0.3,
+          willChange: 'transform',
+        }}
         animate={{
           scale: clicked ? 0.8 : linkHovered ? 1.5 : 1,
         }}
