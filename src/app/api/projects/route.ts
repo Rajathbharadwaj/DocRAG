@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@clerk/nextjs/server";
 import { createSupabaseClient } from "@/lib/supabase";
 import axios from 'axios';
@@ -15,7 +15,7 @@ export async function OPTIONS(req: Request) {
   });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { userId, getToken } = await getAuth(req);
 
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { userId, getToken } = await getAuth(req);
 

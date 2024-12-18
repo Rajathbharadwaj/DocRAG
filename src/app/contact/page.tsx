@@ -17,7 +17,7 @@ export default function ContactPage() {
           </p>
         </div>
         
-        <CalendlyEmbed url="https://calendly.com/rjdevbharadwaj/docrag-meeting-call" />
+        <CalendlyEmbed data-url="https://calendly.com/rjdevbharadwaj/docrag-meeting-call" />
       </main>
     </div>
   );

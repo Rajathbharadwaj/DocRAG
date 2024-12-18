@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import Script from "next/script";
 
-const CALENDLY_URL = "https://calendly.com/rjdevbharadwaj/docrag-meeting-call";
+interface CalendlyEmbedProps extends React.HTMLAttributes<HTMLDivElement> {
+  'data-url': string;
+}
 
-export function CalendlyEmbed() {
+export function CalendlyEmbed({ 'data-url': url, ...props }: CalendlyEmbedProps) {
   const [isLoading, setIsLoading] = useState(true);
-
+  
   return (
-    <div className="relative">
+    <div className="relative" {...props}>
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="animate-pulse text-muted-foreground">
@@ -20,7 +22,7 @@ export function CalendlyEmbed() {
       
       <div 
         className="calendly-inline-widget" 
-        data-url={CALENDLY_URL}
+        data-url={url}
         style={{
           minWidth: "320px",
           height: "1000px",

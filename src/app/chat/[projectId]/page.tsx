@@ -5,9 +5,9 @@ import { ChatUI } from "@/components/chat/chat-ui";
 import { headers } from "next/headers";
 
 interface ChatPageProps {
-  params: {
+  params: Promise<{
     projectId: string;
-  };
+  }>;
 }
 
 export default async function ChatPage({ params }: ChatPageProps) {

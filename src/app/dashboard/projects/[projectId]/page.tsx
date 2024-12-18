@@ -1,14 +1,18 @@
-import { auth } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { ChatUI } from "@/components/chat/chat-ui";
 import { supabase } from "@/lib/supabase";
 
-export default async function ProjectPage({
-  params,
-}: {
-  params: { projectId: string };
-}) {
-  const { userId } = auth();
+interface ProjectPageProps {
+  params: Promise<{
+    projectId: string;
+  }>;
+}
+
+export default async function ProjectPage({ params }: ProjectPageProps) {
+  const { projectId } = await params;
+  const { userId } = await auth();
+  
   if (!userId) {
     redirect("/sign-in");
   }
@@ -16,7 +20,7 @@ export default async function ProjectPage({
   const { data: project, error } = await supabase
     .from("projects")
     .select("*")
-    .eq("id", params.projectId)
+    .eq("id", projectId)
     .eq("user_id", userId)
     .single();
 
@@ -26,7 +30,7 @@ export default async function ProjectPage({
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      <ChatUI projectId={project.id} projectUrl={project.url} projectName={project.name} />
+      <ChatUI project={project} />
     </div>
   );
 }

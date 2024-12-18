@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
 export async function GET(
-  req: Request,
-  { params }: { params: { docName: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ docName: string }> }
 ) {
   try {
-    const { docName } = params;
+    const { docName } = await params;
     console.log("[INDEXING_STATUS_GET] Checking status for doc:", docName);
 
     try {
@@ -26,39 +26,37 @@ export async function GET(
       const data = response.data;
       console.log("[INDEXING_STATUS_GET] Status stream received");
 
-      // Convert stream to JSON
+      // Convert stream to string
       let statusData = '';
-      data.on('data', (chunk: Buffer) => {
+      for await (const chunk of data) {
         statusData += chunk.toString();
-      });
+      }
 
-      return new Promise((resolve) => {
-        data.on('end', () => {
-          try {
-            const parsedData = JSON.parse(statusData);
-            console.log("[INDEXING_STATUS_GET] Parsed status:", parsedData);
+      try {
+        const parsedData = JSON.parse(statusData);
+        console.log("[INDEXING_STATUS_GET] Parsed status:", parsedData);
 
-            // Ensure the response has the expected structure
-            const status = {
-              urls_processed: parsedData.urls_processed || 0,
-              urls_queued: parsedData.urls_queued || 0,
-              status: parsedData.status || 'unknown',
-              error: parsedData.error || null
-            };
+        // Ensure the response has the expected structure
+        const status = {
+          urls_processed: parsedData.urls_processed || 0,
+          urls_queued: parsedData.urls_queued || 0,
+          status: parsedData.status || 'unknown',
+          error: parsedData.error || null
+        };
 
-            resolve(NextResponse.json(status));
-          } catch (parseError) {
-            console.error("[INDEXING_STATUS_GET] Failed to parse status:", parseError);
-            resolve(NextResponse.json({
-              urls_processed: 0,
-              urls_queued: 0,
-              status: 'error',
-              error: 'Failed to parse indexing status'
-            }, { status: 500 }));
-          }
-        });
-      });
-      
+        return NextResponse.json(status);
+      } catch (parseError) {
+        console.error("[INDEXING_STATUS_GET] Failed to parse status:", parseError);
+        return NextResponse.json(
+          { 
+            urls_processed: 0,
+            urls_queued: 0,
+            status: 'error',
+            error: 'Failed to parse indexing status'
+          },
+          { status: 500 }
+        );
+      }
     } catch (fetchError: any) {
       console.error("[INDEXING_STATUS_GET] API request error:", {
         error: fetchError,

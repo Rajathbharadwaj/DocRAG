@@ -46,3 +46,17 @@ export interface ProjectFormData {
   description: string;
   contentType: ContentType;
 }
+
+export interface Project {
+  id: string;
+  name: string;
+  url: string;
+  description: string;
+  content_type: ContentType;
+  doc_name: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  indexing_status?: string;
+  indexing_error?: string;
+}

@@ -1,13 +1,14 @@
-import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs";
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { createSupabaseClient } from "@/lib/supabase";
 
 export async function DELETE(
-  req: Request,
-  { params }: { params: { projectId: string } }
+  request: Request,
+  { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
-    const session = auth();
+    const { projectId } = await params;
+    const session = await auth();
     const { userId } = session;
     
     if (!userId) {
@@ -15,7 +16,6 @@ export async function DELETE(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { projectId } = params;
     console.log("[PROJECT_DELETE] Deleting project:", { projectId, userId });
 
     // Get token for Supabase authentication
